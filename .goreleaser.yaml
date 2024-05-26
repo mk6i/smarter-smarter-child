@@ -1,0 +1,91 @@
+version: 1
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: linux
+    binary: bin/smarter_smarter_child
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm
+    goarm:
+      - "7"
+    main: ./cmd/smarter_smarter_child
+    env:
+      - CGO_ENABLED=1
+      - >-
+        {{- if eq .Arch "amd64"}}CC=x86_64-linux-gnu-gcc{{- end }}
+        {{- if eq .Arch "arm"}}CC=arm-linux-gnueabihf-gcc{{- end }}
+  - id: macos
+    binary: bin/smarter_smarter_child
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    main: ./cmd/smarter_smarter_child
+    env:
+      - CGO_ENABLED=1
+      - >-
+        {{- if eq .Arch "amd64"}}CC=o64-clang{{- end }}
+        {{- if eq .Arch "arm64"}}CC=oa64-clang{{- end }}
+  - id: windows
+    binary: bin/smarter_smarter_child
+    goos:
+      - windows
+    goarch:
+      - amd64
+    main: ./cmd/smarter_smarter_child
+    env:
+      - CGO_ENABLED=1
+      - CC=x86_64-w64-mingw32-gcc
+    gobinary: /root/go/bin/garble
+
+archives:
+  - id: linux
+    builds:
+      - linux
+    format: tar.gz
+    wrap_in_directory: true
+    files:
+      - LICENSE
+      - src: config/settings.env
+        strip_parent: true
+      - src: scripts/run.sh
+        strip_parent: true
+    name_template: >-
+      {{ .Binary }}.{{ .Version }}.{{ .Os }}.
+      {{- if eq .Arch "amd64" }}x86_64{{ else }}arm64_arm7_raspberry_pi{{ end }}
+  - id: macos
+    builds:
+      - macos
+    format: zip
+    wrap_in_directory: true
+    files:
+      - LICENSE
+      - src: config/settings.env
+        strip_parent: true
+      - src: scripts/run.sh
+        strip_parent: true
+    name_template: >-
+      {{ .Binary }}.{{ .Version }}.macos.
+      {{- if eq .Arch "amd64" }}intel_x86_64{{ else }}apple_silicon{{ end }}
+  - id: windows
+    builds:
+      - windows
+    format: zip
+    wrap_in_directory: true
+    files:
+      - LICENSE
+      - src: config/settings.bat
+        strip_parent: true
+      - src: scripts/run.cmd
+        strip_parent: true
+    name_template: >-
+      {{ .Binary }}.{{ .Version }}.{{ .Os }}.
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
