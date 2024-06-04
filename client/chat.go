@@ -175,13 +175,16 @@ func reactToWarning(
 ) error {
 
 	chatMsg := wire.SNAC_0x01_0x10_OServiceEvilNotification{}
-	if err := wire.Unmarshal(&chatMsg, flapBody); err != nil {
+	// io.EOF can be due to an empty OServiceEvilNotification SNAC
+	// which indicates an anonymous warning, so ignore it
+	if err := wire.Unmarshal(&chatMsg, flapBody); err != nil && err != io.EOF {
 		return err
 	}
 
 	chatCtx, ok := chatContexts[chatMsg.ScreenName]
+	// chatMsg.ScreenName is "" (anonymous), or hasn't sent us an IM yet
 	if !ok {
-		logger.Debug("trying to send warning, but can't find chat context, moving on")
+		logger.Debug("can't find chat context, moving on")
 		return nil
 	}
 
