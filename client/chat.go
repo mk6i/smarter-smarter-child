@@ -278,6 +278,10 @@ func exchangeMessages(
 	}
 
 	// Get the message text buried in the SNAC payload.
+	if _, hasIMData := msgSNAC.TLVRestBlock.Slice(wire.ICBMTLVAOLIMData); !hasIMData {
+		logger.Debug("received ICBMChannelMsgToClient with no AOLIMData")
+		return nil
+	}
 	msgText, err := msgSNAC.ExtractMessageText()
 	if err != nil {
 		return err
