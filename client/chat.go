@@ -80,6 +80,10 @@ func Chat(logger *slog.Logger, flapc FlapClient, authCookie string, chatBot Chat
 		return err
 	}
 
+	if err := sendInfoSNAC(flapc, config); err != nil {
+		return err
+	}
+
 	msgCh := make(chan wire.SNACMessage, 10)
 
 	// send client->server messages
@@ -127,10 +131,11 @@ func Chat(logger *slog.Logger, flapc FlapClient, authCookie string, chatBot Chat
 			}
 		case snacFrame.FoodGroup == wire.OService && snacFrame.SubGroup == wire.OServiceEvilNotification:
 			// received a warning, let's respond
-			if err := reactToWarning(logger, msgCh, chatContexts, flapBody, chatBot); err != nil {
+			if err := reactToWarning(logger, msgCh, chatContexts, flapBody, chatBot, config); err != nil {
 				return err
 			}
 		}
+
 	}
 
 	return nil
@@ -172,6 +177,7 @@ func reactToWarning(
 	chatContexts map[string]*chatContext,
 	flapBody *bytes.Buffer,
 	chatBot ChatBot,
+	config config.Config,
 ) error {
 
 	chatMsg := wire.SNAC_0x01_0x10_OServiceEvilNotification{}
@@ -207,7 +213,7 @@ func reactToWarning(
 		return fmt.Errorf("unable to get response from bot: %w", err)
 	}
 
-	if err := sendMessageSNAC(msgCh, chatCtx.cookie, chatMsg.ScreenName, botResponse); err != nil {
+	if err := sendMessageSNAC(msgCh, chatCtx.cookie, chatMsg.ScreenName, botResponse, config); err != nil {
 		return fmt.Errorf("unable to send response: %w", err)
 	}
 
@@ -272,7 +278,7 @@ func exchangeMessages(
 	// reach the rate limit threshold, inform the user that they are sending
 	// messages too quickly and ignore subsequent messages until the rate limit
 	// window passes.
-	if hitRateLimit := enforceRateLimit(logger, msgCh, chatCtx, msgSNAC); hitRateLimit {
+	if hitRateLimit := enforceRateLimit(logger, msgCh, chatCtx, msgSNAC, config); hitRateLimit {
 		logger.Info("user hit message rate limit", "screen_name", msgSNAC.ScreenName)
 		return nil
 	}
@@ -316,7 +322,7 @@ func exchangeMessages(
 		}
 
 		// Send the bot's response.
-		if err := sendMessageSNAC(msgCh, msgSNAC.Cookie, msgSNAC.ScreenName, botResponse); err != nil {
+		if err := sendMessageSNAC(msgCh, msgSNAC.Cookie, msgSNAC.ScreenName, botResponse, config); err != nil {
 			logger.Error("unable to send response", "err", err.Error())
 			return
 		}
@@ -342,7 +348,7 @@ func enforceMsgSizeLimit(
 	tooLong := exceedsMsgSizeLimit(text, config)
 	if tooLong {
 		botResponse := "Your message is too long for me! I am but a simple bot!"
-		if err := sendMessageSNAC(msgCh, msgSNAC.Cookie, msgSNAC.ScreenName, botResponse); err != nil {
+		if err := sendMessageSNAC(msgCh, msgSNAC.Cookie, msgSNAC.ScreenName, botResponse, config); err != nil {
 			logger.Error("unable to send size limit warning", "err", err.Error())
 		}
 	}
@@ -367,13 +373,14 @@ func enforceRateLimit(
 	msgCh chan wire.SNACMessage,
 	chatCtx *chatContext,
 	msgSNAC wire.SNAC_0x04_0x07_ICBMChannelMsgToClient,
+	config config.Config,
 ) bool {
 	if !chatCtx.limiter.Allow() {
 		if !chatCtx.rateLimited {
 			chatCtx.rateLimited = true
 			go func() {
 				botResponse := "You're sending me too many messages! Slow down!"
-				if err := sendMessageSNAC(msgCh, msgSNAC.Cookie, msgSNAC.ScreenName, botResponse); err != nil {
+				if err := sendMessageSNAC(msgCh, msgSNAC.Cookie, msgSNAC.ScreenName, botResponse, config); err != nil {
 					logger.Error("unable to send rate limit limit warning", "err", err.Error())
 					return
 				}
@@ -386,7 +393,7 @@ func enforceRateLimit(
 	return false
 }
 
-func sendMessageSNAC(msgCh chan<- wire.SNACMessage, cookie uint64, screenName string, response string) error {
+func sendMessageSNAC(msgCh chan<- wire.SNACMessage, cookie uint64, screenName string, response string, config config.Config) error {
 	msgFrame := wire.SNACFrame{
 		FoodGroup: wire.ICBM,
 		SubGroup:  wire.ICBMChannelMsgToHost,
@@ -397,7 +404,8 @@ func sendMessageSNAC(msgCh chan<- wire.SNACMessage, cookie uint64, screenName st
 		ScreenName: screenName,
 	}
 
-	response = fmt.Sprintf(`<HTML><BODY BGCOLOR="#ffffff">%s</BODY></HTML>`, response)
+	// build the response message
+	response = strings.ReplaceAll(config.MsgFormat, "@MsgContent@", response)
 	if err := responseSNAC.ComposeMessage(response); err != nil {
 		return fmt.Errorf("unable to compose message: %w", err)
 	}
@@ -441,4 +449,27 @@ var stripHTMLRegex = regexp.MustCompile("<[^>]*>")
 
 func stripHTMLTags(input string) string {
 	return stripHTMLRegex.ReplaceAllString(input, "")
+}
+
+// Set the bot's profile
+func sendInfoSNAC(flapc FlapClient, config config.Config) error {
+	profileSNAC := wire.SNACMessage{
+		Frame: wire.SNACFrame{
+			FoodGroup: wire.Locate,
+			SubGroup:  wire.LocateSetInfo,
+		},
+		Body: wire.SNAC_0x02_0x04_LocateSetInfo{
+			TLVRestBlock: wire.TLVRestBlock{
+				TLVList: wire.TLVList{
+					wire.NewTLV(wire.LocateTLVTagsInfoSigMime, `text/aolrtf; charset="us-ascii"`),
+					wire.NewTLV(wire.LocateTLVTagsInfoSigData, config.ProfileHTML),
+				},
+			},
+		},
+	}
+	err := flapc.SendSNAC(profileSNAC.Frame, profileSNAC.Body)
+	if err != nil {
+		return err
+	}
+	return nil
 }

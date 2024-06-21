@@ -30,3 +30,10 @@ set WORD_COUNT_LIMIT=25
 rem The maximum length of any word sent to the bot in a single message.
 set WORD_LENGTH_LIMIT=15
 
+rem The bot's HTML profile information.
+set PROFILE_HTML='<HTML><BODY BGCOLOR="#CDFFFE"><FONT FACE="Courier New" COLOR="#000080" LANG="0">Hello, %n!<BR>Send me an IM to get started!</FONT><BR><BR><HR><FONT SIZE=1>Powered by <A HREF="https://github.com/mk6i/smarter-smarter-child">SmarterSmarterChild</A>.</FONT></BODY></HTML>'
+
+rem The bot's message response. @MsgContent@ will be replaced with the content
+rem of the bot's response.
+set MSG_FORMAT='<HTML><BODY BGCOLOR="#CDFFFE"><FONT FACE="Courier New" COLOR="#000080" LANG="0">@MsgContent@</FONT></BODY></HTML>'
+
