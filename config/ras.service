@@ -15,7 +15,7 @@ Environment="PASSWORD="
 Environment="SCREEN_NAME=smartersmarterchild"
 Environment="WORD_COUNT_LIMIT=25"
 Environment="WORD_LENGTH_LIMIT=15"
-Environment=PROFILE_HTML='<HTML><BODY BGCOLOR="#CDFFFE"><FONT FACE="Courier New" COLOR="#000080" LANG="0">Hello, %n!<BR>Send me an IM to get started!</FONT><BR><BR><HR><FONT SIZE=1>Powered by <A HREF="https://github.com/mk6i/smarter-smarter-child">SmarterSmarterChild</A>.</FONT></BODY></HTML>'
+Environment="PROFILE_HTML='<HTML><BODY BGCOLOR=\"#CDFFFE\"><FONT FACE=\"Courier New\" COLOR=\"#000080\" LANG=\"0\">Hello, %%n!<BR>Send me an IM to get started!</FONT><BR><BR><HR><FONT SIZE=1>Powered by <A HREF=\"https://github.com/mk6i/smarter-smarter-child\">SmarterSmarterChild</A>.</FONT></BODY></HTML>'"
 Environment=MSG_FORMAT='<HTML><BODY BGCOLOR="#CDFFFE"><FONT FACE="Courier New" COLOR="#000080" LANG="0">@MsgContent@</FONT></BODY></HTML>'
 ExecStart=/opt/ssc/smarter_smarter_child
 Restart=on-failure
