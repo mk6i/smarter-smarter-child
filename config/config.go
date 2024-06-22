@@ -13,4 +13,6 @@ type Config struct {
 	ScreenName      string `envconfig:"SCREEN_NAME" required:"true" val:"smartersmarterchild" description:"The bot's screen name."`
 	WordCountLimit  int    `envconfig:"WORD_COUNT_LIMIT" required:"true" val:"25" description:"The maximum number of words sent to the bot in a single message."`
 	WordLengthLimit int    `envconfig:"WORD_LENGTH_LIMIT" required:"true" val:"15" description:"The maximum length of any word sent to the bot in a single message."`
+	ProfileHTML     string `envconfig:"PROFILE_HTML" required:"true" val:"'<HTML><BODY BGCOLOR=\"#CDFFFE\"><FONT FACE=\"Courier New\" COLOR=\"#000080\" LANG=\"0\">Hello, %n!<BR>Send me an IM to get started!</FONT><BR><BR><HR><FONT SIZE=1>Powered by <A HREF=\"https://github.com/mk6i/smarter-smarter-child\">SmarterSmarterChild</A>.</FONT></BODY></HTML>'" description:"The bot's HTML profile information."`
+	MsgFormat       string `envconfig:"MSG_FORMAT" required:"true" val:"'<HTML><BODY BGCOLOR=\"#CDFFFE\"><FONT FACE=\"Courier New\" COLOR=\"#000080\" LANG=\"0\">@MsgContent@</FONT></BODY></HTML>'" description:"The bot's message response. @MsgContent@ will be replaced with the content of the bot's response."`
 }
