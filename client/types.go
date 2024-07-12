@@ -1,8 +1,6 @@
 package client
 
 import (
-	"bytes"
-
 	"github.com/mk6i/retro-aim-server/wire"
 )
 
@@ -11,7 +9,7 @@ type ChatBot interface {
 }
 
 type FlapClient interface {
-	ReceiveFLAP() (frame wire.FLAPFrame, body *bytes.Buffer, err error)
+	ReceiveFLAP() (frame wire.FLAPFrame, err error)
 	ReceiveSNAC(frame *wire.SNACFrame, body any) error
 	ReceiveSignonFrame() (wire.FLAPSignonFrame, error)
 	SendSNAC(frame wire.SNACFrame, body any) error

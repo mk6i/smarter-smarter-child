@@ -98,7 +98,7 @@ func Chat(logger *slog.Logger, flapc FlapClient, authCookie string, chatBot Chat
 	logger.Info("listening for incoming IMs")
 
 	for {
-		flap, flapBody, err := flapc.ReceiveFLAP()
+		flap, err := flapc.ReceiveFLAP()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
@@ -112,8 +112,9 @@ func Chat(logger *slog.Logger, flapc FlapClient, authCookie string, chatBot Chat
 			continue // received a non-data FLAP frame, nothing to do here
 		}
 
+		flapBody := bytes.NewBuffer(flap.Payload)
 		snacFrame := wire.SNACFrame{}
-		if err := wire.Unmarshal(&snacFrame, flapBody); err != nil {
+		if err := wire.UnmarshalBE(&snacFrame, flapBody); err != nil {
 			return err
 		}
 
@@ -181,13 +182,14 @@ func reactToWarning(
 ) error {
 
 	chatMsg := wire.SNAC_0x01_0x10_OServiceEvilNotification{}
-	// io.EOF can be due to an empty OServiceEvilNotification SNAC
-	// which indicates an anonymous warning, so ignore it
-	if err := wire.Unmarshal(&chatMsg, flapBody); err != nil && err != io.EOF {
+	if err := wire.UnmarshalBE(&chatMsg, flapBody); err != nil {
 		return err
 	}
 
-	chatCtx, ok := chatContexts[chatMsg.ScreenName]
+	if chatMsg.Snitcher == nil {
+		return nil // anonymous warning, nothing to do
+	}
+	chatCtx, ok := chatContexts[chatMsg.Snitcher.ScreenName]
 	// chatMsg.ScreenName is "" (anonymous), or hasn't sent us an IM yet
 	if !ok {
 		logger.Debug("can't find chat context, moving on")
@@ -213,7 +215,7 @@ func reactToWarning(
 		return fmt.Errorf("unable to get response from bot: %w", err)
 	}
 
-	if err := sendMessageSNAC(msgCh, chatCtx.cookie, chatMsg.ScreenName, botResponse, config); err != nil {
+	if err := sendMessageSNAC(msgCh, chatCtx.cookie, chatMsg.Snitcher.ScreenName, botResponse, config); err != nil {
 		return fmt.Errorf("unable to send response: %w", err)
 	}
 
@@ -222,7 +224,7 @@ func reactToWarning(
 	chatCtx.lastExchange[1] = botResponse
 
 	if chatCtx.warnCount == 3 {
-		sendWarningSNAC(msgCh, chatMsg.ScreenName)
+		sendWarningSNAC(msgCh, chatMsg.Snitcher.ScreenName)
 	}
 
 	return nil
@@ -239,7 +241,7 @@ func exchangeMessages(
 ) error {
 
 	msgSNAC := wire.SNAC_0x04_0x07_ICBMChannelMsgToClient{}
-	if err := wire.Unmarshal(&msgSNAC, flapBody); err != nil {
+	if err := wire.UnmarshalBE(&msgSNAC, flapBody); err != nil {
 		return err
 	}
 
@@ -284,13 +286,15 @@ func exchangeMessages(
 	}
 
 	// Get the message text buried in the SNAC payload.
-	if _, hasIMData := msgSNAC.TLVRestBlock.Slice(wire.ICBMTLVAOLIMData); !hasIMData {
+	b, hasIMData := msgSNAC.TLVRestBlock.Slice(wire.ICBMTLVAOLIMData)
+	if !hasIMData {
 		logger.Debug("received ICBMChannelMsgToClient with no AOLIMData")
 		return nil
 	}
-	msgText, err := msgSNAC.ExtractMessageText()
+
+	msgText, err := wire.UnmarshalICBMMessageText(b)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to unmarshal ICBM message text: %w", err)
 	}
 
 	// Strip HTML formatting so that we don't confuse the bot.
@@ -398,21 +402,27 @@ func sendMessageSNAC(msgCh chan<- wire.SNACMessage, cookie uint64, screenName st
 		FoodGroup: wire.ICBM,
 		SubGroup:  wire.ICBMChannelMsgToHost,
 	}
-	responseSNAC := wire.SNAC_0x04_0x06_ICBMChannelMsgToHost{
-		Cookie:     cookie,
-		ChannelID:  1,
-		ScreenName: screenName,
-	}
 
 	// build the response message
 	response = strings.ReplaceAll(config.MsgFormat, "@MsgContent@", response)
-	if err := responseSNAC.ComposeMessage(response); err != nil {
-		return fmt.Errorf("unable to compose message: %w", err)
+
+	frags, err := wire.ICBMFragmentList(response)
+	if err != nil {
+		return fmt.Errorf("unable to create ICBM fragment list: %w", err)
 	}
 
 	msgCh <- wire.SNACMessage{
 		Frame: msgFrame,
-		Body:  responseSNAC,
+		Body: wire.SNAC_0x04_0x06_ICBMChannelMsgToHost{
+			Cookie:     cookie,
+			ChannelID:  1,
+			ScreenName: screenName,
+			TLVRestBlock: wire.TLVRestBlock{
+				TLVList: wire.TLVList{
+					wire.NewTLV(wire.ICBMTLVAOLIMData, frags),
+				},
+			},
+		},
 	}
 
 	return nil
