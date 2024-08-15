@@ -3,6 +3,7 @@ package bot
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
@@ -27,6 +28,15 @@ type completionResponse struct {
 	Model   string   `json:"model"`
 	Usage   usage    `json:"usage"`
 	Choices []choice `json:"choices"`
+}
+
+type errorResponse struct {
+	Error struct {
+		Message string      `json:"message"`
+		Type    string      `json:"type"`
+		Param   interface{} `json:"param"`
+		Code    string      `json:"code"`
+	} `json:"error"`
 }
 
 type usage struct {
@@ -106,6 +116,21 @@ func (g *ChatGPTChatBot) ExchangeMessage(send string, lastExchange [2]string) (r
 		return "", err
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		switch resp.StatusCode {
+		case http.StatusUnauthorized:
+		case http.StatusForbidden:
+		case http.StatusTooManyRequests:
+		case http.StatusNotFound:
+			var response errorResponse
+			if err := json.Unmarshal(body, &response); err != nil {
+				return "", err
+			}
+			return "", fmt.Errorf("error from chatgpt api: %s", response.Error.Message)
+		default:
+			return "", fmt.Errorf("unknown error from chatgpt api: %d", resp.StatusCode)
+		}
+	}
 	var response completionResponse
 	if err := json.Unmarshal(body, &response); err != nil {
 		return "", err

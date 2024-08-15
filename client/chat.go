@@ -315,19 +315,21 @@ func exchangeMessages(
 		if _, wantsEvents := msgSNAC.TLVRestBlock.Slice(wire.ICBMTLVWantEvents); wantsEvents {
 			// Tell the client that the bot is "typing". Provides a visual
 			// indicator in the IM window that something is happening.
-			sendTypingEventSNAC(msgSNAC, msgCh)
+			sendTypingEventSNAC(msgSNAC, msgCh, 0x0002)
 		}
 
 		// Get the bot's response to this message.
 		botResponse, err := chatBot.ExchangeMessage(msgText, *chatCtx.lastExchange)
 		if err != nil {
 			logger.Error("unable to get response from bot", "err", err.Error())
+			sendTypingEventSNAC(msgSNAC, msgCh, 0x0000)
 			return
 		}
 
 		// Send the bot's response.
 		if err := sendMessageSNAC(msgCh, msgSNAC.Cookie, msgSNAC.ScreenName, botResponse, config); err != nil {
 			logger.Error("unable to send response", "err", err.Error())
+			sendTypingEventSNAC(msgSNAC, msgCh, 0x0000)
 			return
 		}
 
@@ -440,7 +442,7 @@ func sendWarningSNAC(msgCh chan<- wire.SNACMessage, screenName string) {
 	}
 }
 
-func sendTypingEventSNAC(chatMsg wire.SNAC_0x04_0x07_ICBMChannelMsgToClient, msgCh chan<- wire.SNACMessage) {
+func sendTypingEventSNAC(chatMsg wire.SNAC_0x04_0x07_ICBMChannelMsgToClient, msgCh chan<- wire.SNACMessage, event uint16) {
 	msgCh <- wire.SNACMessage{
 		Frame: wire.SNACFrame{
 			FoodGroup: wire.ICBM,
@@ -450,7 +452,7 @@ func sendTypingEventSNAC(chatMsg wire.SNAC_0x04_0x07_ICBMChannelMsgToClient, msg
 			Cookie:     chatMsg.Cookie,
 			ChannelID:  chatMsg.ChannelID,
 			ScreenName: chatMsg.ScreenName,
-			Event:      0x0002, // indicates "typing begun"
+			Event:      event,
 		},
 	}
 }
