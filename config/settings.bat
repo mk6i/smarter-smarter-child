@@ -37,3 +37,18 @@ rem The bot's message response. @MsgContent@ will be replaced with the content
 rem of the bot's response.
 set MSG_FORMAT='<HTML><BODY BGCOLOR="#CDFFFE"><FONT FACE="Courier New" COLOR="#000080" LANG="0">@MsgContent@</FONT></BODY></HTML>'
 
+rem The top-p value to use when querying the OpenAI API.
+set TOP_P=0.5
+
+rem The temperature value to use when querying the OpenAI API.
+set TEMPERATURE=0.7
+
+rem The AI model to use.
+set MODEL='gpt-4o-mini'
+
+rem The initial prompt to the OpenAI API when creating a new conversation.
+set BOT_PROMPT='You are SmarterChild, a dumb AIM chatbot.'
+
+rem OpenAI API URL.
+set API_URL='https://api.openai.com/v1/chat/completions'
+
