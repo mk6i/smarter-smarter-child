@@ -66,8 +66,8 @@ func main() {
 			logger.Debug("offline mode enabled, using local chatbot backend")
 			chatBot = bot.NewStaticChatBot()
 		} else {
-			logger.Debug("using ChatGPT chatbot backend")
-			chatBot = bot.NewChatGPTBot(cfg.OpenAIKey)
+			logger.Debug("using OpenAI API chatbot backend")
+			chatBot = bot.NewChatGPTBot(cfg)
 		}
 		return client.Chat(logger, flapc, authCookie, chatBot, cfg)
 	}()

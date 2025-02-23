@@ -8,12 +8,15 @@ import (
 	"math/rand"
 	"net/http"
 	"time"
+
+	"github.com/mk6i/smarter-smarter-child/config"
 )
 
 type chatRequest struct {
 	Model       string    `json:"model"`
 	Messages    []message `json:"messages"`
 	Temperature float64   `json:"temperature"`
+	TopP        float64   `json:"top_p"`
 }
 
 type message struct {
@@ -51,25 +54,35 @@ type choice struct {
 	Index        int     `json:"index"`
 }
 
-func NewChatGPTBot(secretKey string) *ChatGPTChatBot {
+func NewChatGPTBot(cfg config.Config) *ChatGPTChatBot {
 	return &ChatGPTChatBot{
-		secretKey: secretKey,
-		client:    &http.Client{},
-		r:         rand.New(rand.NewSource(time.Now().UnixNano())),
+		secretKey:   cfg.OpenAIKey,
+		prompt:      cfg.BotPrompt,
+		model:       cfg.Model,
+		temperature: cfg.Temperature,
+		topP:        cfg.TopP,
+		apiURL:      cfg.APIUrl,
+		client:      &http.Client{},
+		r:           rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
 type ChatGPTChatBot struct {
-	r         *rand.Rand
-	secretKey string
-	client    *http.Client
+	r           *rand.Rand
+	secretKey   string
+	prompt      string
+	model       string
+	temperature float64
+	topP        float64
+	apiURL      string
+	client      *http.Client
 }
 
 func (g *ChatGPTChatBot) ExchangeMessage(send string, lastExchange [2]string) (receive string, err error) {
 	messages := []message{
 		{
 			Role:    "system",
-			Content: "You are SmarterChild, a dumb AIM chatbot.",
+			Content: g.prompt,
 		},
 	}
 	if lastExchange[0] != "" {
@@ -88,16 +101,17 @@ func (g *ChatGPTChatBot) ExchangeMessage(send string, lastExchange [2]string) (r
 	})
 
 	data := chatRequest{
-		Model:       "gpt-3.5-turbo",
+		Model:       g.model,
 		Messages:    messages,
-		Temperature: 0.7,
+		Temperature: g.temperature,
+		TopP:        g.topP,
 	}
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return "", err
 	}
 
-	req, err := http.NewRequest("POST", "https://api.openai.com/v1/chat/completions", bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", g.apiURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return "", err
 	}
@@ -126,9 +140,9 @@ func (g *ChatGPTChatBot) ExchangeMessage(send string, lastExchange [2]string) (r
 			if err := json.Unmarshal(body, &response); err != nil {
 				return "", err
 			}
-			return "", fmt.Errorf("error from chatgpt api: %s", response.Error.Message)
+			return "", fmt.Errorf("error from upstream api: %s", response.Error.Message)
 		default:
-			return "", fmt.Errorf("unknown error from chatgpt api: %d", resp.StatusCode)
+			return "", fmt.Errorf("unknown error from upstream api: %d", resp.StatusCode)
 		}
 	}
 	var response completionResponse
