@@ -20,7 +20,10 @@ func Authenticate(flapc FlapClient, screenName string, password string) (string,
 
 	challengeRequest := wire.SNAC_0x17_0x06_BUCPChallengeRequest{}
 	challengeRequest.Append(wire.NewTLV(wire.LoginTLVTagsScreenName, screenName))
-	if err := flapc.SendSNAC(wire.SNACFrame{}, challengeRequest); err != nil {
+	if err := flapc.SendSNAC(wire.SNACFrame{
+		FoodGroup: wire.BUCP,
+		SubGroup:  wire.BUCPChallengeRequest,
+	}, challengeRequest); err != nil {
 		return "", "", fmt.Errorf("unable to send SNAC(0x17,0x06): %w", err)
 	}
 
@@ -33,7 +36,10 @@ func Authenticate(flapc FlapClient, screenName string, password string) (string,
 	loginRequest.Append(wire.NewTLV(wire.LoginTLVTagsScreenName, screenName))
 	loginRequest.Append(wire.NewTLV(wire.LoginTLVTagsPasswordHash,
 		wire.StrongMD5PasswordHash(password, challengeResponse.AuthKey)))
-	if err := flapc.SendSNAC(wire.SNACFrame{}, loginRequest); err != nil {
+	if err := flapc.SendSNAC(wire.SNACFrame{
+		FoodGroup: wire.BUCP,
+		SubGroup:  wire.BUCPLoginRequest,
+	}, loginRequest); err != nil {
 		return "", "", fmt.Errorf("unable to send SNAC(0x17,0x02): %w", err)
 	}
 
