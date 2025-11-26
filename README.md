@@ -29,7 +29,7 @@ Follow [this guide](./docs/BUILD.md) to learn how to compile and run SmarterSmar
 
 ## 🌍 Community
 
-Check out the Retro AIM Server [Discord server](https://discord.gg/2Xy4nF3Uh9) (associated with this project) to get
+Check out the Open OSCAR Server [Discord server](https://discord.gg/2Xy4nF3Uh9) (associated with this project) to get
 help or find out how to get involved.
 
 ## 📄 License
