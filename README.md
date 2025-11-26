@@ -1,16 +1,17 @@
 # SmarterSmarterChild
 
-**SmarterSmarterChild** is an AOL Instant Messenger chatbot that mimics the functionality of the
+**SmarterSmarterChild** is an AIM chatbot that mimics the functionality of the
 famous [SmarterChild](https://en.wikipedia.org/wiki/SmarterChild) chatbot from the 2000's using ChatGPT.
 
-<p align="center">
-  <img width="550" alt="screenshot of an AIM conversation with SmarterSmarterChild" src="https://github.com/mk6i/smarter-smarter-child/assets/2894330/cd362f67-12fd-41d6-9626-37fb11ee74b4">
-</p>
 
 It's called *Smarter*SmarterChild because, well, it's way more advanced than the old SmarterChild, but just as fun!
 
 This project is a demonstration of how to create a chatbot using the public golang packages exported
-by the [Retro AIM Server](https://github.com/mk6i/retro-aim-server) project.
+by the [Open OSCAR Server](https://github.com/mk6i/open-oscar-server) project.
+
+| Disclaimer                                                                                                                                                                                                                           |
+|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| This project is an independent, open-source initiative and is not affiliated with, endorsed by, or associated with AOL or Yahoo! Inc. This project is entirely non-commercial and does not generate any revenue or accept donations. |
 
 ## 🏁 How to Run
 
